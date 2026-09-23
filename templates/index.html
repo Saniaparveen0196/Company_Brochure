@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Brochure Generator</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --border: #2a2e38;
+    --text: #e6e8eb;
+    --muted: #9aa0ab;
+    --accent: #f97316;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+  }
+  .wrap { width: 100%; max-width: 720px; }
+  h1 { font-size: 1.6rem; margin-bottom: 4px; }
+  p.sub { color: var(--muted); margin-top: 0; margin-bottom: 24px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+  input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #0f1115;
+    color: var(--text);
+    margin-bottom: 14px;
+    font-size: 0.95rem;
+  }
+  input:focus { outline: none; border-color: var(--accent); }
+  button {
+    background: var(--accent);
+    color: #1a1a1a;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  .status { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
+  .error { color: #f87171; }
+  #output { white-space: pre-wrap; line-height: 1.5; }
+  details { color: var(--muted); font-size: 0.85rem; margin-top: 10px; }
+  summary { cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📄 AI Brochure Generator</h1>
+  <p class="sub">Enter a company name and website — get a short AI-written brochure.</p>
+
+  <div class="card">
+    <label for="company_name">Company name</label>
+    <input id="company_name" placeholder="Hugging Face" />
+
+    <label for="url">Website URL</label>
+    <input id="url" placeholder="https://huggingface.co" />
+
+    <label for="api_key">Groq API key (optional if the server already has one set)</label>
+    <input id="api_key" type="password" placeholder="Leave blank to use the server's default key, if configured" />
+
+    <button id="go">Generate brochure</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="card" id="result-card" style="display:none;">
+    <div id="output"></div>
+    <details id="log-details">
+      <summary>Progress log</summary>
+      <div id="log"></div>
+    </details>
+  </div>
+</div>
+
+<script>
+const btn = document.getElementById('go');
+const statusEl = document.getElementById('status');
+const resultCard = document.getElementById('result-card');
+const outputEl = document.getElementById('output');
+const logEl = document.getElementById('log');
+
+btn.addEventListener('click', async () => {
+  const company_name = document.getElementById('company_name').value.trim();
+  const url = document.getElementById('url').value.trim();
+  const api_key = document.getElementById('api_key').value.trim();
+
+  if (!company_name || !url) {
+    statusEl.textContent = 'Please enter both a company name and a website URL.';
+    statusEl.className = 'status error';
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.textContent = 'Reading the website and writing your brochure... this can take 15-30s.';
+  statusEl.className = 'status';
+  resultCard.style.display = 'none';
+
+  try {
+    const resp = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ company_name, url, api_key })
+    });
+    const data = await resp.json();
+
+    resultCard.style.display = 'block';
+    logEl.textContent = (data.log || []).join('\n');
+
+    if (data.ok) {
+      outputEl.textContent = data.brochure;
+      statusEl.textContent = 'Done.';
+    } else {
+      outputEl.textContent = '';
+      statusEl.textContent = 'Error: ' + data.error;
+      statusEl.className = 'status error';
+    }
+  } catch (e) {
+    statusEl.textContent = 'Request failed: ' + e.message;
+    statusEl.className = 'status error';
+  } finally {
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>
