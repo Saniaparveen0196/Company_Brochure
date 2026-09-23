@@ -1,0 +1,6 @@
+flask
+gunicorn
+openai
+requests
+beautifulsoup4
+ 
